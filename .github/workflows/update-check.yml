@@ -1,0 +1,141 @@
+name: Check for RabbitMQ Updates
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Every Monday at 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Read current versions
+        id: current
+        shell: bash
+        run: |
+          rmq=$(grep "RABBITMQ_VERSION:" .github/workflows/build.yml | head -1 | sed "s/.*'\(.*\)'/\1/")
+          erl=$(grep "ERLANG_VERSION:" .github/workflows/build.yml | head -1 | sed "s/.*'\(.*\)'/\1/")
+          erl_major=$(echo "$erl" | cut -d. -f1)
+          echo "rmq=$rmq" >> "$GITHUB_OUTPUT"
+          echo "erl=$erl" >> "$GITHUB_OUTPUT"
+          echo "erl_major=$erl_major" >> "$GITHUB_OUTPUT"
+          echo "Current: RabbitMQ $rmq, Erlang $erl (major: $erl_major)"
+
+      - name: Check latest RabbitMQ release
+        id: latest_rmq
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag=$(gh api repos/rabbitmq/rabbitmq-server/releases/latest --jq '.tag_name')
+          version="${tag#v}"
+          # Verify Windows zip asset exists
+          asset_exists=$(gh api "repos/rabbitmq/rabbitmq-server/releases/latest" \
+            --jq "[.assets[].name | select(. == \"rabbitmq-server-windows-${version}.zip\")] | length")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "asset_exists=$asset_exists" >> "$GITHUB_OUTPUT"
+          echo "Latest RabbitMQ: $version (Windows asset exists: $asset_exists)"
+
+      - name: Check latest Erlang release in current major series
+        id: latest_erl
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          major="${{ steps.current.outputs.erl_major }}"
+          version=$(gh api "repos/erlang/otp/releases?per_page=50" \
+            --jq "[.[] | select(.prerelease == false and (.tag_name | startswith(\"OTP-${major}.\")))][0].tag_name // empty")
+          version="${version#OTP-}"
+          # Verify Windows installer asset exists
+          if [ -n "$version" ]; then
+            asset_exists=$(gh api "repos/erlang/otp/releases/tags/OTP-${version}" \
+              --jq "[.assets[].name | select(. == \"otp_win64_${version}.exe\")] | length")
+          else
+            version="${{ steps.current.outputs.erl }}"
+            asset_exists=0
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "asset_exists=$asset_exists" >> "$GITHUB_OUTPUT"
+          echo "Latest Erlang ${major}.x: $version (Windows asset exists: $asset_exists)"
+
+      - name: Determine if update needed
+        id: check
+        shell: bash
+        run: |
+          update=false
+          summary=""
+          if [ "${{ steps.latest_rmq.outputs.version }}" != "${{ steps.current.outputs.rmq }}" ] && \
+             [ "${{ steps.latest_rmq.outputs.asset_exists }}" != "0" ]; then
+            update=true
+            summary="RabbitMQ ${{ steps.current.outputs.rmq }} → ${{ steps.latest_rmq.outputs.version }}"
+          fi
+          if [ "${{ steps.latest_erl.outputs.version }}" != "${{ steps.current.outputs.erl }}" ] && \
+             [ "${{ steps.latest_erl.outputs.asset_exists }}" != "0" ]; then
+            update=true
+            if [ -n "$summary" ]; then
+              summary="$summary, Erlang ${{ steps.current.outputs.erl }} → ${{ steps.latest_erl.outputs.version }}"
+            else
+              summary="Erlang ${{ steps.current.outputs.erl }} → ${{ steps.latest_erl.outputs.version }}"
+            fi
+          fi
+          echo "update=$update" >> "$GITHUB_OUTPUT"
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
+          echo "Update needed: $update ($summary)"
+
+      - name: Update build.yml versions
+        if: steps.check.outputs.update == 'true'
+        shell: bash
+        run: |
+          new_rmq="${{ steps.latest_rmq.outputs.version }}"
+          new_erl="${{ steps.latest_erl.outputs.version }}"
+          old_rmq="${{ steps.current.outputs.rmq }}"
+          old_erl="${{ steps.current.outputs.erl }}"
+
+          if [ "$new_rmq" != "$old_rmq" ] && [ "${{ steps.latest_rmq.outputs.asset_exists }}" != "0" ]; then
+            sed -i "s/RABBITMQ_VERSION: '${old_rmq}'/RABBITMQ_VERSION: '${new_rmq}'/" .github/workflows/build.yml
+            sed -i "s/<RabbitMQVersion Condition=.*>${old_rmq}</<RabbitMQVersion Condition=\"'\$(RabbitMQVersion)' == ''\">${new_rmq}</" RabbitMQInstaller/RabbitMQInstaller.wixproj
+            # Update README version table
+            sed -i "s/| RabbitMQ  | ${old_rmq}/| RabbitMQ  | ${new_rmq}/" README.md
+            sed -i "s/RABBITMQ_VERSION: '${old_rmq}'/RABBITMQ_VERSION: '${new_rmq}'/" README.md
+          fi
+
+          if [ "$new_erl" != "$old_erl" ] && [ "${{ steps.latest_erl.outputs.asset_exists }}" != "0" ]; then
+            sed -i "s/ERLANG_VERSION: '${old_erl}'/ERLANG_VERSION: '${new_erl}'/" .github/workflows/build.yml
+            sed -i "s/<ErlangVersion Condition=.*>${old_erl}</<ErlangVersion Condition=\"'\$(ErlangVersion)' == ''\">${new_erl}</" RabbitMQInstaller/RabbitMQInstaller.wixproj
+            sed -i "s/| Erlang\/OTP | ${old_erl}/| Erlang\/OTP | ${new_erl}/" README.md
+            sed -i "s/ERLANG_VERSION: '${old_erl}'/ERLANG_VERSION: '${new_erl}'/" README.md
+          fi
+
+          echo "Files updated:"
+          git diff --stat
+
+      - name: Create pull request
+        if: steps.check.outputs.update == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: auto-update/rabbitmq
+          delete-branch: true
+          title: "Update ${{ steps.check.outputs.summary }}"
+          body: |
+            Automated version update detected by the weekly check.
+
+            ### Changes
+            ${{ steps.check.outputs.summary }}
+
+            ### Verification
+            - [x] Windows binary assets confirmed available on GitHub Releases
+            - [ ] Review the [RabbitMQ changelog](https://github.com/rabbitmq/rabbitmq-server/releases/tag/v${{ steps.latest_rmq.outputs.version }})
+            - [ ] Merge to trigger a build and confirm the MSI builds successfully
+          commit-message: |
+            Update ${{ steps.check.outputs.summary }}
+
+            Co-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          labels: dependencies

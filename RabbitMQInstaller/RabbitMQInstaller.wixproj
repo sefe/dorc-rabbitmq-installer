@@ -1,4 +1,4 @@
-﻿<Project Sdk="WixToolset.Sdk/5.0.0">
+﻿<Project Sdk="WixToolset.Sdk/6.0.2">
   <PropertyGroup>
     <RabbitMQVersion Condition="'$(RabbitMQVersion)' == ''">4.2.5</RabbitMQVersion>
     <ErlangVersion Condition="'$(ErlangVersion)' == ''">27.3.4.1</ErlangVersion>
@@ -21,8 +21,8 @@
     <Content Include="RabbitMQInstaller.msi.json" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="WixToolset.Heat" Version="5.0.0" />
-    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.0" />
+    <PackageReference Include="WixToolset.Heat" Version="6.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="6.0.2" />
   </ItemGroup>
   <Target Name="UnzipServerArtefacts" AfterTargets="BeforeResolveReferences">
     <Exec Command="&quot;$(ProjectDir)7za.exe&quot; x &quot;$(ProjectDir)rabbitmq-server-windows-$(RabbitMQVersion).zip&quot; -o&quot;$(ProjectDir)&quot;" Condition="!Exists('$(ProjectDir)$(RabbitMQDir)')" />

@@ -1,4 +1,4 @@
-# RabbitMQ Installer
+# DOrc RabbitMQ Installer
 
 Windows MSI installer that packages [RabbitMQ Server](https://www.rabbitmq.com/) with [Erlang/OTP](https://www.erlang.org/) for automated deployment via [DOrc](https://github.com/sefe/dorc).
 
@@ -18,7 +18,7 @@ The CI workflow produces a `drop` artifact containing:
 |-----------|---------|
 | RabbitMQ  | 4.2.5   |
 | Erlang/OTP | 27.3.4.1 |
-| WiX Toolset SDK | 5.0.0 |
+| WiX Toolset SDK | 6.0.2 |
 
 ## Updating Versions
 
@@ -40,7 +40,7 @@ Configure your DOrc project with:
 
 | Setting | Value |
 |---------|-------|
-| **ArtefactsUrl** | `https://api.github.com/repos/sefe/rabbitmq-installer` |
+| **ArtefactsUrl** | `https://api.github.com/repos/sefe/dorc-rabbitmq-installer` |
 | **ArtefactsSubPaths** | `build.yml` |
 | **SourceControlType** | `GitHub` |
 
@@ -64,3 +64,14 @@ dotnet build RabbitMQInstaller.sln -c Release -p:Platform=x64
 ```
 
 The MSI output is in `RabbitMQInstaller/bin/x64/Release/`.
+
+## Automatic Update Checks
+
+A scheduled workflow ([`update-check.yml`](.github/workflows/update-check.yml)) runs every Monday and:
+
+1. Checks for new stable RabbitMQ releases on GitHub
+2. Checks for new Erlang/OTP patch releases in the current major series (27.x)
+3. Verifies Windows binary assets exist for both
+4. Opens a PR with the version bumps if updates are available
+
+You can also trigger it manually via **Actions → Check for RabbitMQ Updates → Run workflow**.
