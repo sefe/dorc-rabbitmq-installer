@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Override versions from dispatch inputs
         if: github.event_name == 'workflow_dispatch'
@@ -102,13 +102,13 @@ jobs:
         run: |
           $ref = "${{ github.ref }}"
           if ($ref -eq "refs/heads/main") {
-            echo "RETENTION_DAYS=400" >> $env:GITHUB_ENV
+            echo "RETENTION_DAYS=90" >> $env:GITHUB_ENV
           } else {
             echo "RETENTION_DAYS=14" >> $env:GITHUB_ENV
           }
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: drop
           path: drop/
