@@ -1,0 +1,40 @@
+﻿<Project Sdk="WixToolset.Sdk/5.0.0">
+  <PropertyGroup>
+    <RabbitMQVersion Condition="'$(RabbitMQVersion)' == ''">4.2.5</RabbitMQVersion>
+    <ErlangVersion Condition="'$(ErlangVersion)' == ''">27.3.4.1</ErlangVersion>
+    <RabbitMQDir>rabbitmq_server-$(RabbitMQVersion)</RabbitMQDir>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+    <DefineConstants>Debug;RabbitMQDir=$(RabbitMQDir);RabbitMQVersion=$(RabbitMQVersion)</DefineConstants>
+	  <OutputPath>bin\x64\$(Configuration)</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+    <DefineConstants>RabbitMQDir=$(RabbitMQDir);RabbitMQVersion=$(RabbitMQVersion)</DefineConstants>
+	  <OutputPath>bin\x64\$(Configuration)</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="7za.exe" />
+    <Content Include="HeatTransform.xslt" />
+    <Content Include="otp_win64_$(ErlangVersion).exe" />
+    <Content Include="rabbitmq-server-windows-$(RabbitMQVersion).zip" />
+    <Content Include="RabbitMQInstaller.msi.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Heat" Version="5.0.0" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.0" />
+  </ItemGroup>
+  <Target Name="UnzipServerArtefacts" AfterTargets="BeforeResolveReferences">
+    <Exec Command="&quot;$(ProjectDir)7za.exe&quot; x &quot;$(ProjectDir)rabbitmq-server-windows-$(RabbitMQVersion).zip&quot; -o&quot;$(ProjectDir)&quot;" Condition="!Exists('$(ProjectDir)$(RabbitMQDir)')" />
+  </Target>
+  <ItemGroup>
+    <HarvestDirectory Include="$(RabbitMQDir)">
+      <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
+      <ComponentGroupName>RabbitMQContent</ComponentGroupName>
+      <Transforms>$(Projectdir)\HeatTransform.xslt</Transforms>
+      <PreprocessorVariable>RabbitMQDir</PreprocessorVariable>
+      <SuppressRootDirectory>true</SuppressRootDirectory>
+      <SuppressRegistry>true</SuppressRegistry>
+    </HarvestDirectory>
+  </ItemGroup>
+</Project>

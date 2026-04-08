@@ -1,0 +1,115 @@
+name: RabbitMQ Installer Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      rabbitmq_version:
+        description: 'RabbitMQ version (e.g. 4.2.5)'
+        required: false
+      erlang_version:
+        description: 'Erlang/OTP version (e.g. 27.3.4.1)'
+        required: false
+
+env:
+  RABBITMQ_VERSION: '4.2.5'
+  ERLANG_VERSION: '27.3.4.1'
+  BUILD_CONFIGURATION: 'Release'
+  BUILD_PLATFORM: 'x64'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Override versions from dispatch inputs
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          if ('${{ github.event.inputs.rabbitmq_version }}') {
+            echo "RABBITMQ_VERSION=${{ github.event.inputs.rabbitmq_version }}" >> $env:GITHUB_ENV
+          }
+          if ('${{ github.event.inputs.erlang_version }}') {
+            echo "ERLANG_VERSION=${{ github.event.inputs.erlang_version }}" >> $env:GITHUB_ENV
+          }
+
+      - name: Generate version number
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ env.RABBITMQ_VERSION }}.${{ github.run_number }}"
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Build version: $version"
+
+      - name: Download RabbitMQ
+        shell: pwsh
+        run: |
+          $version = "${{ env.RABBITMQ_VERSION }}"
+          $url = "https://github.com/rabbitmq/rabbitmq-server/releases/download/v${version}/rabbitmq-server-windows-${version}.zip"
+          $dest = "RabbitMQInstaller/rabbitmq-server-windows-${version}.zip"
+          Write-Host "Downloading RabbitMQ ${version}..."
+          Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
+          Write-Host "Downloaded to ${dest} ($(((Get-Item $dest).Length / 1MB).ToString('F1')) MB)"
+
+      - name: Download Erlang/OTP
+        shell: pwsh
+        run: |
+          $version = "${{ env.ERLANG_VERSION }}"
+          $url = "https://github.com/erlang/otp/releases/download/OTP-${version}/otp_win64_${version}.exe"
+          $dest = "RabbitMQInstaller/otp_win64_${version}.exe"
+          Write-Host "Downloading Erlang/OTP ${version}..."
+          Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
+          Write-Host "Downloaded to ${dest} ($(((Get-Item $dest).Length / 1MB).ToString('F1')) MB)"
+
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          dotnet build RabbitMQInstaller.sln `
+            -c ${{ env.BUILD_CONFIGURATION }} `
+            -p:Platform=${{ env.BUILD_PLATFORM }} `
+            -p:RabbitMQVersion=${{ env.RABBITMQ_VERSION }} `
+            -p:ErlangVersion=${{ env.ERLANG_VERSION }} `
+            -p:RunWixToolsOutOfProc=true
+
+      - name: Collect artifacts
+        shell: pwsh
+        run: |
+          $artifactsDir = "drop/Server"
+          New-Item -ItemType Directory -Force -Path $artifactsDir | Out-Null
+
+          $buildOutput = "RabbitMQInstaller/bin/x64/${{ env.BUILD_CONFIGURATION }}"
+          Copy-Item -Path "$buildOutput/*.msi" -Destination $artifactsDir -Force
+          Copy-Item -Path "RabbitMQInstaller/RabbitMQInstaller.msi.json" -Destination $artifactsDir -Force
+          Copy-Item -Path "RabbitMQInstaller/otp_win64_${{ env.ERLANG_VERSION }}.exe" -Destination $artifactsDir -Force
+
+          Write-Host "Artifacts collected:"
+          Get-ChildItem -Path $artifactsDir | ForEach-Object {
+            Write-Host "  $($_.Name) ($(($_.Length / 1MB).ToString('F1')) MB)"
+          }
+
+      - name: Set artifact retention
+        id: retention
+        shell: pwsh
+        run: |
+          $ref = "${{ github.ref }}"
+          if ($ref -eq "refs/heads/main") {
+            echo "RETENTION_DAYS=400" >> $env:GITHUB_ENV
+          } else {
+            echo "RETENTION_DAYS=14" >> $env:GITHUB_ENV
+          }
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: drop
+          path: drop/
+          retention-days: ${{ env.RETENTION_DAYS }}

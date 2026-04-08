@@ -1,0 +1,10 @@
+{
+  "ProductNames": [],
+  "ServerType": "RabbitNode",
+  "Parameters": [
+    {
+      "MSIParameter": "INSTALLFOLDER",
+      "DeployProperty": "Rabbit_InstallFolder"
+    }
+  ]
+}

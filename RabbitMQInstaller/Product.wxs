@@ -1,0 +1,36 @@
+﻿<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package Name="RabbitMQInstaller" Language="1033" Version="$(var.RabbitMQVersion)" Manufacturer="SEFE" UpgradeCode="2d9fc02f-9f55-492f-b731-572aaaba9815">
+    
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
+
+    <Feature Id="ProductFeature" Title="RabbitMQInstaller" Level="1">
+      <ComponentGroupRef Id="RabbitMQContent" />
+      <ComponentRef Id="RemoveFolders" />
+    </Feature>
+
+    <SetProperty Id="InstallService" Value="&quot;[INSTALLFOLDER]sbin\rabbitmq-service.bat&quot; install" Before="InstallService" Sequence="execute" />
+    <CustomAction Id="InstallService" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no" BinaryRef="Wix4UtilCA_X86" />
+
+    <SetProperty Id="UninstallService" Value="&quot;[INSTALLFOLDER]sbin\rabbitmq-service.bat&quot; remove" Before="UninstallService" Sequence="execute" />
+    <CustomAction Id="UninstallService" DllEntry="WixQuietExec" Execute="deferred" Return="check" Impersonate="no" BinaryRef="Wix4UtilCA_X86" />
+
+    <InstallExecuteSequence>
+      <Custom Action="InstallService" Before="InstallFinalize" Condition="NOT Installed AND NOT REMOVE" />
+      <Custom Action="UninstallService" After="InstallInitialize" Condition="Installed AND NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
+  </Package>
+
+  <Fragment>
+      <StandardDirectory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="RabbitMQ Server">
+          <Component Id="RemoveFolders" Guid="{52D5E903-1839-456F-A7F0-AAAFDA125D9C}" Bitness="always64">
+            <CreateFolder />
+            <util:RemoveFolderEx Id="RemoveFolder" Property="INSTALLFOLDER" On="both" />
+            <RemoveFolder Id="Remove.Folder" On="both" />
+          </Component>
+        </Directory>
+      </StandardDirectory>
+    </Fragment>
+
+</Wix>
