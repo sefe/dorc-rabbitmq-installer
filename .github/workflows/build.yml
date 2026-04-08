@@ -21,7 +21,7 @@ env:
   BUILD_PLATFORM: 'x64'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -113,3 +113,32 @@ jobs:
           name: drop
           path: drop/
           retention-days: ${{ env.RETENTION_DAYS }}
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.VERSION }}"
+          $tag = "v$version"
+          $title = "RabbitMQ ${{ env.RABBITMQ_VERSION }} (Erlang ${{ env.ERLANG_VERSION }})"
+          $notes = @"
+          ### Components
+          | Component | Version |
+          |-----------|---------|
+          | RabbitMQ | ${{ env.RABBITMQ_VERSION }} |
+          | Erlang/OTP | ${{ env.ERLANG_VERSION }} |
+
+          ### Artifacts
+          - **RabbitMQInstaller.msi** — WiX MSI that installs RabbitMQ Server and registers the Windows service
+          - **RabbitMQInstaller.msi.json** — DOrc deployment descriptor
+          - **otp_win64_${{ env.ERLANG_VERSION }}.exe** — Erlang/OTP installer (prerequisite)
+          "@
+
+          gh release create $tag `
+            --title $title `
+            --notes $notes `
+            "drop/Server/RabbitMQInstaller.msi#RabbitMQInstaller.msi" `
+            "drop/Server/RabbitMQInstaller.msi.json#RabbitMQInstaller.msi.json" `
+            "drop/Server/otp_win64_${{ env.ERLANG_VERSION }}.exe#otp_win64_${{ env.ERLANG_VERSION }}.exe"
