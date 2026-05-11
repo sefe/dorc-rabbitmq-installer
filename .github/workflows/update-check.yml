@@ -21,8 +21,8 @@ jobs:
         id: current
         shell: bash
         run: |
-          rmq=$(grep "RABBITMQ_VERSION:" .github/workflows/build.yml | head -1 | sed "s/.*'\(.*\)'/\1/")
-          erl=$(grep "ERLANG_VERSION:" .github/workflows/build.yml | head -1 | sed "s/.*'\(.*\)'/\1/")
+          rmq=$(grep "^RABBITMQ_VERSION=" versions.env | cut -d= -f2)
+          erl=$(grep "^ERLANG_VERSION=" versions.env | cut -d= -f2)
           erl_major=$(echo "$erl" | cut -d. -f1)
           echo "rmq=$rmq" >> "$GITHUB_OUTPUT"
           echo "erl=$erl" >> "$GITHUB_OUTPUT"
@@ -100,18 +100,18 @@ jobs:
           old_erl="${{ steps.current.outputs.erl }}"
 
           if [ "$new_rmq" != "$old_rmq" ] && [ "${{ steps.latest_rmq.outputs.asset_exists }}" != "0" ]; then
-            sed -i "s/RABBITMQ_VERSION: '${old_rmq}'/RABBITMQ_VERSION: '${new_rmq}'/" .github/workflows/build.yml
+            sed -i "s/^RABBITMQ_VERSION=${old_rmq}$/RABBITMQ_VERSION=${new_rmq}/" versions.env
             sed -i "s/<RabbitMQVersion Condition=.*>${old_rmq}</<RabbitMQVersion Condition=\"'\$(RabbitMQVersion)' == ''\">${new_rmq}</" RabbitMQInstaller/RabbitMQInstaller.wixproj
             # Update README version table
             sed -i "s/| RabbitMQ  | ${old_rmq}/| RabbitMQ  | ${new_rmq}/" README.md
-            sed -i "s/RABBITMQ_VERSION: '${old_rmq}'/RABBITMQ_VERSION: '${new_rmq}'/" README.md
+            sed -i "s/RABBITMQ_VERSION=${old_rmq}/RABBITMQ_VERSION=${new_rmq}/" README.md
           fi
 
           if [ "$new_erl" != "$old_erl" ] && [ "${{ steps.latest_erl.outputs.asset_exists }}" != "0" ]; then
-            sed -i "s/ERLANG_VERSION: '${old_erl}'/ERLANG_VERSION: '${new_erl}'/" .github/workflows/build.yml
+            sed -i "s/^ERLANG_VERSION=${old_erl}$/ERLANG_VERSION=${new_erl}/" versions.env
             sed -i "s/<ErlangVersion Condition=.*>${old_erl}</<ErlangVersion Condition=\"'\$(ErlangVersion)' == ''\">${new_erl}</" RabbitMQInstaller/RabbitMQInstaller.wixproj
             sed -i "s/| Erlang\/OTP | ${old_erl}/| Erlang\/OTP | ${new_erl}/" README.md
-            sed -i "s/ERLANG_VERSION: '${old_erl}'/ERLANG_VERSION: '${new_erl}'/" README.md
+            sed -i "s/ERLANG_VERSION=${old_erl}/ERLANG_VERSION=${new_erl}/" README.md
           fi
 
           echo "Files updated:"

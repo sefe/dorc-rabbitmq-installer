@@ -15,8 +15,6 @@ on:
         required: false
 
 env:
-  RABBITMQ_VERSION: '4.2.5'
-  ERLANG_VERSION: '27.3.4.1'
   BUILD_CONFIGURATION: 'Release'
   BUILD_PLATFORM: 'x64'
 
@@ -30,6 +28,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Load versions
+        shell: pwsh
+        run: |
+          Get-Content versions.env | ForEach-Object {
+            if ($_ -match '^\s*([^#=]+?)\s*=\s*(.+?)\s*$') {
+              echo "$($Matches[1])=$($Matches[2])" >> $env:GITHUB_ENV
+            }
+          }
 
       - name: Override versions from dispatch inputs
         if: github.event_name == 'workflow_dispatch'

@@ -22,12 +22,11 @@ The CI workflow produces a `drop` artifact containing:
 
 ## Updating Versions
 
-Versions are parameterised — update the env vars in [`.github/workflows/build.yml`](.github/workflows/build.yml):
+Versions are parameterised — update [`versions.env`](versions.env):
 
-```yaml
-env:
-  RABBITMQ_VERSION: '4.2.5'
-  ERLANG_VERSION: '27.3.4.1'
+```
+RABBITMQ_VERSION=4.2.5
+ERLANG_VERSION=27.3.4.1
 ```
 
 Or trigger a one-off build with different versions via **Actions → RabbitMQ Installer Build → Run workflow** and fill in the version inputs.
