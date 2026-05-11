@@ -117,25 +117,12 @@ jobs:
           echo "Files updated:"
           git diff --stat
 
-      - name: Create pull request
+      - name: Commit and push to main
         if: steps.check.outputs.update == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          branch: auto-update/rabbitmq
-          delete-branch: true
-          title: "Update ${{ steps.check.outputs.summary }}"
-          body: |
-            Automated version update detected by the weekly check.
-
-            ### Changes
-            ${{ steps.check.outputs.summary }}
-
-            ### Verification
-            - [x] Windows binary assets confirmed available on GitHub Releases
-            - [ ] Review the [RabbitMQ changelog](https://github.com/rabbitmq/rabbitmq-server/releases/tag/v${{ steps.latest_rmq.outputs.version }})
-            - [ ] Merge to trigger a build and confirm the MSI builds successfully
-          commit-message: |
-            Update ${{ steps.check.outputs.summary }}
-
-            Co-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-          labels: dependencies
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add versions.env RabbitMQInstaller/RabbitMQInstaller.wixproj README.md
+          git commit -m "Update ${{ steps.check.outputs.summary }}"
+          git push origin main
