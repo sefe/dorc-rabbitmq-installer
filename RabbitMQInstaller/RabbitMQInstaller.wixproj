@@ -1,7 +1,7 @@
 ﻿<Project Sdk="WixToolset.Sdk/6.0.2">
   <PropertyGroup>
-    <RabbitMQVersion Condition="'$(RabbitMQVersion)' == ''">4.2.5</RabbitMQVersion>
-    <ErlangVersion Condition="'$(ErlangVersion)' == ''">27.3.4.1</ErlangVersion>
+    <RabbitMQVersion Condition="'$(RabbitMQVersion)' == ''">4.3.0</RabbitMQVersion>
+    <ErlangVersion Condition="'$(ErlangVersion)' == ''">27.3.4.11</ErlangVersion>
     <RabbitMQDir>rabbitmq_server-$(RabbitMQVersion)</RabbitMQDir>
     <Platforms>x64</Platforms>
   </PropertyGroup>
