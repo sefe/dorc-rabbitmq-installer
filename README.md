@@ -16,7 +16,7 @@ The CI workflow produces a `drop` artifact containing:
 
 | Component | Version |
 |-----------|---------|
-| RabbitMQ  | 4.3.2   |
+| RabbitMQ  | 4.3.4   |
 | Erlang/OTP | 27.3.4.14 |
 | WiX Toolset SDK | 6.0.2 |
 
@@ -25,7 +25,7 @@ The CI workflow produces a `drop` artifact containing:
 Versions are parameterised — update [`versions.env`](versions.env):
 
 ```
-RABBITMQ_VERSION=4.3.2
+RABBITMQ_VERSION=4.3.4
 ERLANG_VERSION=27.3.4.14
 ```
 
