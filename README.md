@@ -16,8 +16,8 @@ The CI workflow produces a `drop` artifact containing:
 
 | Component | Version |
 |-----------|---------|
-| RabbitMQ  | 4.3.6   |
-| Erlang/OTP | 27.3.4.18 |
+| RabbitMQ  | 4.4.0   |
+| Erlang/OTP | 27.3.4.19 |
 | WiX Toolset SDK | 6.0.2 |
 
 ## Updating Versions
@@ -25,8 +25,8 @@ The CI workflow produces a `drop` artifact containing:
 Versions are parameterised — update [`versions.env`](versions.env):
 
 ```
-RABBITMQ_VERSION=4.3.6
-ERLANG_VERSION=27.3.4.18
+RABBITMQ_VERSION=4.4.0
+ERLANG_VERSION=27.3.4.19
 ```
 
 Or trigger a one-off build with different versions via **Actions → RabbitMQ Installer Build → Run workflow** and fill in the version inputs.
